@@ -9,10 +9,10 @@ DROP TABLE IF EXISTS "user";
 
 CREATE TABLE "user" (
     id serial not null UNIQUE,
-    nickname CITEXT UNIQUE not null,
+    nickname CITEXT collate "C" UNIQUE not null,
     fullname TEXT not null,
     about TEXT,
-    email CITEXT not null UNIQUE
+    email CITEXT collate "C" not null UNIQUE
 );
 
 CREATE TABLE "forum" (
@@ -44,9 +44,9 @@ CREATE Table "post" (
     user_id int REFERENCES "user" (id) on DELETE CASCADE not null,
     message TEXT not NULL,
     thread_id int REFERENCES "thread" (id) on DELETE CASCADE not null,
-    forum citext references "forum"(slug) on delete cascade not null,
     edited boolean DEFAULT false,
     created TIMESTAMP WITH TIME ZONE DEFAULT now(),
+    forum_id int REFERENCES "forum" (id) on Delete Cascade not null,
     path int[]
 );
 
@@ -61,10 +61,10 @@ CREATE TABLE "vote" (
 );
 
 CREATE TABLE "forum_user"(
-    id          serial primary key,
-    forum       citext references "forum"(slug) on delete cascade not null,
-    "user"      int references "user" (id) on delete cascade not null,
-    UNIQUE (forum, "user")
+    id          serial not null unique,
+    forum_id    int references "forum" (id) on delete cascade not null,
+    user_id     int references "user" (id) on delete cascade not null,
+    UNIQUE (forum_id, user_id)
 );
 
 CREATE OR REPLACE FUNCTION  update_vote() RETURNS TRIGGER AS $update_vote$
@@ -98,21 +98,74 @@ create or replace function create_post_with_path() returns trigger as $create_po
 declare
     parent_path int[];
 begin
-    update forum set posts = posts + 1 where slug = new.forum;
-    insert into forum_user (forum, "user") values (new.forum, new.user_id)
+    update "forum" set posts = posts + 1 where id = new.forum_id;
+    insert into "forum_user" (forum_id, user_id) values (new.forum_id, new.user_id)
     on conflict do nothing;
     parent_path = (select path from post where id = new.parent limit 1);
     new.path = parent_path || NEW.id;
-    return NULL;
+    return new;
 end;
 $create_post_with_path$ language plpgsql;
 
-DROP TRIGGER IF EXISTS create_post_with_path ON "post";
-create trigger create_post_with_path before insert on post for each row execute procedure create_post_with_path();
+create trigger create_post_with_path
+    before insert on post
+    for each row execute procedure create_post_with_path();
 
-CREATE INDEX ON "user" (nickname, email);
-CREATE INDEX ON "forum" (slug);
-CREATE INDEX ON "thread" (slug);
-CREATE INDEX ON "post"(id);
+create or replace function increment_forum_threads() returns trigger as $increment_forum_threads$
+begin
+    update "forum" set threads = threads + 1 where forum.id = new.forum_id;
+    insert into "forum_user" (forum_id, user_id) values (new.forum_id, new.user_id)
+    on conflict do nothing;
+    return null;
+end;
+$increment_forum_threads$ language plpgsql;
 
-SELECT * FROM pg_indexes WHERE tablename = 'user';
+create trigger increment_forum_threads
+    after insert on thread
+    for each row execute procedure increment_forum_threads();
+
+drop index if exists index_user_on_nickname;
+create index if not exists index_user_on_nickname on "user" using hash(nickname);
+drop index if exists index_user_on_email;
+create index if not exists index_user_on_email on "user" using hash(email);
+
+drop index if exists index_forum_slug;
+create index if not exists index_forum_slug on forum using hash(slug);
+
+drop index if exists index_thread_on_created;
+create index if not exists index_thread_on_created on thread(created);
+drop index if exists index_thread_on_slug;
+create index if not exists index_thread_on_slug on thread using hash(slug);
+drop index if exists index_thread_on_forum_and_created;
+create index if not exists index_thread_on_forum_and_created on thread(forum_id, created);
+drop index if exists index_thread_on_forum;
+create index if not exists index_thread_on_forum on thread using hash(forum_id);
+drop index if exists thread_on_id_and_forum;
+create index if not exists thread_on_id_and_forum ON thread(id, forum_id);
+
+drop index if exists index_post_on_id;
+create unique index if not exists index_post_on_id ON post(id);
+
+drop index if exists index_post_on_thread;
+create index if not exists index_post_on_thread on post using hash (thread_id);
+
+drop index if exists index_post_on_thread_and_path_and_id;
+create index if not exists index_thread_on_forum_and_created on "thread"(forum_id, created);
+
+drop index if exists index_post_on_thread_and_path_and_id;
+create index if not exists index_post_on_thread_and_path_and_id on "post"(thread_id, path, id);
+
+drop index if exists index_post_on_parent;
+create index if not exists index_post_on_parent on "post"(parent, id);
+
+drop index if exists index_post_on_parent_path_and_path;
+create index if not exists index_post_on_parent_path_and_path on "post"((path[1]), path);
+
+drop index if exists index_post_on_parent_path_and_path_and_id;
+create index if not exists  index_post_on_parent_path_and_path_and_id ON post ((path[1]), path, id);
+
+drop index if exists index_post_on_parent_and_thread;
+create index if not exists index_post_on_parent_and_thread ON post(parent, thread_id);
+
+VACUUM;
+VACUUM ANALYSE;

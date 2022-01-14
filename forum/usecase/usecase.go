@@ -106,3 +106,18 @@ func (fU *Usecase) GetThreadsByForum(slug, limit, since, desc string) ([]models.
 	}
 	return threads, nil
 }
+
+func (fU *Usecase) GetForumUsers (slug,limit,since,desc string) ([]models.User,error) {
+	forum,err := fU.ForumDetails(slug)
+	if err != nil {
+		return nil, err
+	}
+	if limit == "" {
+		limit = "100"
+	}
+	users, err := fU.forumRepo.GetForumUsersById(forum.ID,limit,since,desc)
+	if err != nil {
+		return nil, err
+	}
+	return users,nil
+}

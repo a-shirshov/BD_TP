@@ -13,8 +13,8 @@ type Forum struct {
 	Title string `db:"title"`
 	User string	`db:"nickname"`
 	Slug string `db:"slug"`
-	Posts int
-	Threads int
+	Posts int `db:"posts"`
+	Threads int `db:"threads"`
 }
 
 type Thread struct {
@@ -64,9 +64,19 @@ type PostsRelated struct {
 }
 
 type FullPostInfo struct {
-	Post Post
-	Author User
-	Thread Thread
-	Forum Forum
+	Post *Post
+	Author *User
+	Thread *Thread
+	Forum *Forum
 }
 
+type PostMessage struct {
+	Message string `db:"message"`
+}
+
+type Status struct {
+	User   int `json:"user"`
+	Forum  int `json:"forum"`
+	Thread int `json:"thread"`
+	Post   int `json:"post"`
+}

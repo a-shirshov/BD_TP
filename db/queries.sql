@@ -120,11 +120,11 @@ select p.id,p.parent,u.nickname as author,p.message,p.edited,f.slug as forum,t.i
 	order by p.id desc limit $3;
 
 
-insert into "post" (parent,message,user_id,forum,thread_id,created) 
-    select 0,'qwe',u.id,'O-z-M0A2-98y82',t.id,'2021-01-21T12:22:38.680+03:00' from "user" as u
+insert into "post" as p (parent,message,user_id,forum,thread_id,created) 
+    select 0,'qwe',u.id,f.slug,t.id,'2021-01-21T12:22:38.680+03:00' from "user" as u
     join "thread" as t on t.user_id = u.id
-    join "forum" as f on f.slug = t.forum
-    where u.nickname = 'bonam.NHQ6kGl1h87sJU' AND t.id = 68  returning id;
+    join "forum" as f on f.slug = p.forum
+    where u.nickname = 'avaritiam.xvbPnf16mtrTrV' AND t.id = 68  returning id;
 
 
 select u.id,'O-z-M0A2-98y82',t.id from "user" as u, "thread" as t 
@@ -133,4 +133,22 @@ select u.id,'O-z-M0A2-98y82',t.id from "user" as u, "thread" as t
 select * from "forum" as f  
 join "thread" as t on f.id = t.forum_id
 join "user" as u on t.user_id = u.id
-where f.slug ='O-z-M0A2-98y82' and t.id = 68 and u.nickname = 'bonam.NHQ6kGl1h87sJU'
+where f.slug ='r2_KN52iOUr9kX' and t.id = 68 and u.nickname = 'avaritiam.xvbPnf16mtrTrV'
+
+insert into post (parent, user_id, message, forum, thread_id, created) values (0,865,'En dolores infelix cogitarem potes nec meretur auris corpore. Aer de cur ne, habitaculum illinc agnoscerem. Tu num fac tuam intuetur dominum. De locum quomodo te.',
+    'i5ruUesMoy8ukX',340,'2021-01-21T12:22:38.680+03:00') returning id;
+
+
+select p.id,p.parent,u.nickname as author,p.message,p.edited,f.slug as forum,t.id as thread,p.created
+	from "post" as p
+	join "thread" as t on p.thread_id = t.id
+	join "forum" as f on f.id = t.forum_id
+	join "user" as u on u.id = p.user_id
+	where p.thread_id = 240
+	order by p.path, id limit 100
+
+select p.id,p.parent,u.nickname as author,p.message,p.edited,f.slug as forum,p.thread_id as thread,p.created from "post" as p
+    join "thread" as t on t.id = p.thread_id
+    join "forum" as f on f.id = t.forum_id
+    join "user" as u on u.id = p.user_id
+    where p.id = 2816;

@@ -18,14 +18,19 @@ import (
 	postRepo "bd_tp/post/repository"
 	postUsecase "bd_tp/post/usecase"
 
+	serviceDelivery "bd_tp/service/delivery/http"
+	serviceRepo "bd_tp/service/repository"
+	serviceUsecase "bd_tp/service/usecase"
+
 	"bd_tp/utils"
 	"fmt"
 	"net/http"
 
+	"os"
+
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
 	"github.com/spf13/viper"
-	"os"
 )
 
 func main() {
@@ -47,16 +52,19 @@ func main() {
 	forumR := forumRepo.NewForumRepository(db)
 	threadR := threadRepo.NewThreadRepository(db)
 	postR := postRepo.NewPostRepository(db)
+	serviceR := serviceRepo.NewServiceRepository(db)
 
 	userU := userUsecase.NewUserUsecase(userR)
 	forumU := forumUsecase.NewForumUsecase(forumR,userR,threadR)
-	threadU := threadUsecase.NewThreadUsecase(threadR,postR,userR)
+	threadU := threadUsecase.NewThreadUsecase(threadR,postR,userR,forumR)
 	postU := postUsecase.NewPostUsecase(postR,userR,forumR,threadR)
+	serviceU := serviceUsecase.NewServiceUseCase(serviceR)
 
 	userD := userDelivery.NewUserDelivery(userU)
 	forumD := forumDelivery.NewForumDelivery(forumU)
 	threadD := threadDelivery.NewThreadDelivery(threadU)
 	postD := postDelivery.NewPostDelivery(postU)
+	serviceD := serviceDelivery.NewServiceDelivery(serviceU)
 	
 
 	r := mux.NewRouter()
@@ -69,6 +77,8 @@ func main() {
 	register.ThreadEndpoints(threadRouter,threadD)
 	postRouter := rApi.PathPrefix("/post").Subrouter()
 	register.PostEndpoints(postRouter,postD)
+	serviceRouter := rApi.PathPrefix("/service").Subrouter()
+	register.ServiceEndpoints(serviceRouter,serviceD)
 	
 	err = http.ListenAndServe(":5000", r)
 	if err != nil {

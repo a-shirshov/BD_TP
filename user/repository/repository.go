@@ -29,7 +29,7 @@ func (uR *Repository) CreateUser(u *models.User) ([]models.User, bool, error) {
 	isNew := true
 	query := createUserQuery
 	var users []models.User
-	rows, err := uR.db.Query(query,u.Nickname,u.Fullname,u.About,u.Email)
+	_, err := uR.db.Exec(query,u.Nickname,u.Fullname,u.About,u.Email)
 	if err != nil {
 		if strings.Contains(err.Error(), `duplicate key value violates unique constraint`) {
 			query := findUserByNicknameQuery
@@ -51,7 +51,6 @@ func (uR *Repository) CreateUser(u *models.User) ([]models.User, bool, error) {
 		}
 
 	}
-	defer rows.Close()
 	users = append(users, *u)
 	return users, isNew, nil
 }

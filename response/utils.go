@@ -129,6 +129,19 @@ func GetPostRelatedFromRequest(r io.Reader) (*models.PostsRelated, error) {
 	return result, nil
 }
 
+func GetPostFromRequest(r io.Reader) (*models.Post, error) {
+	var post PostResponse
+	err := json.NewDecoder(r).Decode(&post) 
+	if err != nil {
+		
+		return nil, err
+	}
+	result := &models.Post{
+		Message: post.Message,
+	}
+	return result, nil
+}
+
 func SendResponse(w http.ResponseWriter, statusCode int, response interface{}) {
 	w.Header().Set("Content-Type","application/json")
 	w.WriteHeader(statusCode)

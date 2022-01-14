@@ -148,3 +148,48 @@ func (fD *ForumDelivery) GetThreadsByForum (w http.ResponseWriter, r *http.Reque
 	}
 	response.SendResponse(w,200,threadsResponse)
 }
+
+func (fD *ForumDelivery) GetForumUsers(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Path
+	split := strings.Split(path,"/")
+	slug := split[len(split)-2]
+
+	q := r.URL.Query()
+	var limit string
+	var since string
+	var desc string
+	if len(q["limit"]) > 0 {
+		limit = q["limit"][0]
+	}
+	if len(q["since"]) > 0 {
+		since = q["since"][0]
+	}
+	if len(q["desc"]) > 0 {
+		desc = q["desc"][0]
+	}
+
+	users, err := fD.ForumUsecase.GetForumUsers(slug,limit,since,desc)
+	if err != nil {
+		
+		errorResponse := &response.Error{
+			Message: "No forum with with slug:"+slug,
+		}
+		response.SendResponse(w,404,errorResponse)
+		return
+	}
+	var usersResponse []response.UserResponse
+	for _, user := range users {
+		userResponse := &response.UserResponse{
+			Nickname: user.Nickname,
+			Fullname: user.Fullname,
+			About:    user.About,
+			Email:    user.Email,
+		}
+		usersResponse = append(usersResponse, *userResponse)
+	}
+	if len(usersResponse) == 0 {
+		response.SendResponse(w, 200, []response.ThreadResponse{})
+		return
+	}
+	response.SendResponse(w,200,usersResponse)
+}

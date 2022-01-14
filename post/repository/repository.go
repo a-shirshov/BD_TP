@@ -1,8 +1,9 @@
 package repository
 
 import (
-	sql "github.com/jmoiron/sqlx"
 	"bd_tp/models"
+
+	sql "github.com/jmoiron/sqlx"
 	//"strings"
 	//"fmt"
 )
@@ -23,6 +24,10 @@ const (
     join "forum" as f on f.id = t.forum_id
     join "user" as u on u.id = p.user_id
     where p.id = $1;`
+
+	UpdatePostByIdQuery = `update post set message = $1,edited = true 
+	where id = $2 
+	returning id;` 
 )
 
 func (pR *Repository) GetPostByID(id int) (*models.Post,error) {
@@ -33,4 +38,21 @@ func (pR *Repository) GetPostByID(id int) (*models.Post,error) {
 		return nil,err
 	}
 	return &post,err
+}
+
+func (pR *Repository) UpdatePost(post *models.Post) (*models.Post, error) {
+	query := UpdatePostByIdQuery
+	var updatedPost models.Post
+	err := pR.db.QueryRow(query,post.Message,post.ID).Scan(&updatedPost.ID)
+	if err != nil {
+		
+		return nil,err
+	}
+	query = FindPostByID
+	err = pR.db.Get(&updatedPost,query,&updatedPost.ID)
+	if err != nil {
+		
+		return nil,err
+	}
+	return &updatedPost,nil
 }

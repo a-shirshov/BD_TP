@@ -3,7 +3,7 @@ package repository
 import (
 	"bd_tp/models"
 	"errors"
-	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -21,13 +21,15 @@ const (
     join "forum" as f on f.id = t.forum_id
     where t.slug = $1 and p.id = $2;`
 
-	createPostsWithIdQuery = `insert into "post" (parent,message,user_id,thread_id,created,forum) 
-    select $1,$2,u.id,t.id,$5,$6 from "user" as u, "thread" as t 
-    where u.nickname = $3 AND t.id = $4  returning id;`
+	selectPostsNew = `select id,parent,message,edited,forum,thread_id,created from "post`
 
-	createPostsWithSlugQuery = `insert into "post" (parent,message,user_id,thread_id,created,forum) 
-    select $1,$2,u.id,t.id,$5,$6 from "user" as u, "thread" as t 
-    where u.nickname = $3 AND t.slug = $4 returning id;`
+	createPostsWithIdQuery = `insert into "post" (parent,user_id,message,thread_id,created,forum_id) 
+    select $1,u.id,$2,t.id,$3,$4 from "user" as u, "thread" as t 
+    where u.nickname = $5 AND t.id = $6  returning id;`
+
+	createPostsWithSlugQuery = `insert into "post" (parent,user_id,message,thread_id,created,forum_id) 
+    select $1,u.id,$2,t.id,$3,$4 from "user" as u, "thread" as t 
+    where u.nickname = $5 AND t.slug = $6  returning id;`
 
 	findThreadWithIdQuery = `select t.id, t.title,u.nickname as author,f.slug as forum,t.message,t.votes,t.slug,t.created from "thread" as t
     join "user" as u on u.id = t.user_id
@@ -88,6 +90,82 @@ const (
 	join "user" as u on u.id = p.user_id
 	where p.thread_id = $1 
 	order by p.id asc limit $2`
+
+	getPostsByThreadTreeDescSince = `select p.id,p.parent,u.nickname as author,p.message,p.edited,f.slug as forum,t.id as thread,p.created
+	from "post" as p
+	join "thread" as t on p.thread_id = t.id
+	join "forum" as f on f.id = t.forum_id
+	join "user" as u on u.id = p.user_id
+	where p.thread_id = $1 and 
+	p.path < (select path from post where id =$2)
+	order by p.path desc, id desc limit $3`
+
+	getPostsByThreadTreeDesc = `select p.id,p.parent,u.nickname as author,p.message,p.edited,f.slug as forum,t.id as thread,p.created
+	from "post" as p
+	join "thread" as t on p.thread_id = t.id
+	join "forum" as f on f.id = t.forum_id
+	join "user" as u on u.id = p.user_id
+	where p.thread_id = $1 
+	order by p.path desc, id desc limit $2`
+
+	getPostsByThreadTreeAscSince = `select p.id,p.parent,u.nickname as author,p.message,p.edited,f.slug as forum,t.id as thread,p.created
+	from "post" as p
+	join "thread" as t on p.thread_id = t.id
+	join "forum" as f on f.id = t.forum_id
+	join "user" as u on u.id = p.user_id
+	where p.thread_id = $1 and 
+	p.path > (select path FROM post where id = $2) 
+	order by path, id limit $3`
+
+	getPostsByThreadTreeAsc = `select p.id,p.parent,u.nickname as author,p.message,p.edited,f.slug as forum,t.id as thread,p.created
+	from "post" as p
+	join "thread" as t on p.thread_id = t.id
+	join "forum" as f on f.id = t.forum_id
+	join "user" as u on u.id = p.user_id
+	where p.thread_id = $1
+	order by p.path, id limit $2`
+
+	getPostsByThreadParentTreeDescSince = `select p.id,p.parent,u.nickname as author,p.message,p.edited,f.slug as forum,t.id as thread,p.created 
+	from post as p
+	join "thread" as t on p.thread_id = t.id
+	join "forum" as f on f.id = t.forum_id
+	join "user" as u on u.id = p.user_id
+	where p.path[1] in 
+	(select id from post where thread_id = $1 and parent = 0 and path[1] <
+	(select path[1] from post where id = $2) order by id desc limit $3)
+	order by p.path[1] desc, p.path, id`
+
+	getPostsByThreadParentTreeDesc = `select p.id,p.parent,u.nickname as author,p.message,p.edited,f.slug as forum,t.id as thread,p.created 
+	from post as p
+	join "thread" as t on p.thread_id = t.id
+	join "forum" as f on f.id = t.forum_id
+	join "user" as u on u.id = p.user_id
+	where p.path[1] in 
+	(select id from post where thread_id = $1 and parent = 0 
+	order by id desc limit $2)
+	order by p.path[1] desc, p.path, id`
+
+	getPostsByThreadParentTreeAsc = `select p.id,p.parent,u.nickname as author,p.message,p.edited,f.slug as forum,t.id as thread,p.created 
+	from post as p
+	join "thread" as t on p.thread_id = t.id
+	join "forum" as f on f.id = t.forum_id
+	join "user" as u on u.id = p.user_id
+	where p.path[1] in 
+	(select id from post where thread_id = $1 and parent = 0 order by id limit $2)
+	order by p.path, id`
+
+	getPostsByThreadParentTreeAscSince = `select p.id,p.parent,u.nickname as author,p.message,p.edited,f.slug as forum,t.id as thread,p.created 
+	from post as p
+	join "thread" as t on p.thread_id = t.id
+	join "forum" as f on f.id = t.forum_id
+	join "user" as u on u.id = p.user_id
+	where p.path[1] in 
+	(select id from post where thread_id = $1 and parent = 0 and path[1] > 
+	(select path[1] from post where id = $2) 
+	order by id limit $3)
+	order by p.path, id`
+
+	createPostsNewQuery = `insert into post (parent, user_id, message, forum, thread_id, created) values ($1,$2,$3,$4,$5,$6) returning id`
 )
 
 type Repository struct {
@@ -100,54 +178,82 @@ func NewThreadRepository(db *sql.DB) *Repository {
 	}
 }
 
-func (fR *Repository) CreatePostsWithID(posts []models.Post, id int) ([]models.Post, int, error) {
+func (fR *Repository) CreatePostsWithID(posts []models.Post, threadId int, forumId int) ([]models.Post, int, error) {
 	query := createPostsWithIdQuery
 	var postID int
 	created := time.Now()
 	for index, post := range posts {
-		fmt.Println("post = ",post)
-		err := fR.db.Get(&postID, query, post.Parent, post.Message, post.Author, id, created, post.Forum)
+		err := fR.db.Get(&postID, query, post.Parent, post.Message, created, forumId, post.Author, threadId)
 		if err != nil {
-			fmt.Println("In create err",err)
-			return nil, 500, err
+			return nil, 404, err
 		}
 		posts[index].ID = postID
 	}
 
 	query = selectPostsWithIdQuery
 	for index, post := range posts {
-		err := fR.db.Get(&(posts[index]), query, id, post.ID)
+		err := fR.db.Get(&(posts[index]), query, threadId, post.ID)
 		if err != nil {
-			fmt.Println("In select err",err)
-			return nil, 500, err
+			return nil, 404, err
 		}
-		posts[index].Thread = id
+		posts[index].Thread = threadId
 	}
 	return posts, 201, nil
 }
 
-func (fR *Repository) CreatePostsWithSlug(posts []models.Post, slug string) ([]models.Post, int, error) {
+func (fR *Repository) CreatePostsWithSlug(posts []models.Post, threadSlug string, forumId int) ([]models.Post, int, error) {
 	query := createPostsWithSlugQuery
 	var postID int
 	created := time.Now()
 	for index, post := range posts {
-		err := fR.db.Get(&postID, query, post.Parent, post.Message, post.Author, slug, created,post.Forum)
+		err := fR.db.Get(&postID, query, post.Parent, post.Message, created, forumId, post.Author, threadSlug)
 		if err != nil {
 
-			return nil, 500, err
+			return nil, 404, err
 		}
 		posts[index].ID = postID
 	}
 
 	query = selectPostsWithSlugQuery
 	for index, post := range posts {
-		err := fR.db.Get(&(posts[index]), query, slug, post.ID)
+		err := fR.db.Get(&(posts[index]), query, threadSlug, post.ID)
 		if err != nil {
 
-			return nil, 500, err
+			return nil, 404, err
 		}
 	}
 	return posts, 201, nil
+}
+
+func (fR *Repository) CreatePostsNew(threadId int, forum string, posts []models.Post, users []int) ([]models.Post, error) {
+	created := time.Now()
+	for index := range posts {
+		if posts[index].Parent != 0 {
+			id := -1
+			err := fR.db.QueryRow(`select id from post where thread = $1 and id = $2`, threadId, posts[index].Parent).Scan(&id)
+			if err != nil {
+				return nil,err
+			}
+		}
+		query := createPostsNewQuery
+		err := fR.db.Get(&(posts[index].ID), query, posts[index].Parent, users[index], posts[index].Message, forum, threadId, created)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	var newPosts []models.Post
+	query := selectPostsNew
+	for index := range posts {
+		var newPost models.Post
+		err := fR.db.Get(&newPost, query, posts[index].Parent, users[index], posts[index].Message, forum, threadId, created)
+		if err != nil {
+			return nil, err
+		}
+		newPost.Author = posts[index].Author
+		newPosts = append(newPosts, newPost)
+	}
+	return newPosts, nil
 }
 
 func (fR *Repository) ThreadDetailsByID(id int) (*models.Thread, error) {
@@ -172,6 +278,25 @@ func (fR *Repository) ThreadDetailsBySlug(slug string) (*models.Thread, error) {
 	}
 	//thread.Slug = slug
 	return &thread, nil
+}
+
+func (fR *Repository) ThreadDetails(slug_or_id string) (*models.Thread, error) {
+	var query string
+	_, err := strconv.Atoi(slug_or_id)
+	if err != nil {
+		query = findThreadWithSlugQuery
+	} else {
+		query = findThreadWithIdQuery
+	}
+	var thread models.Thread
+	err = fR.db.Get(&thread, query, slug_or_id)
+	if err != nil {
+
+		return nil, err
+	}
+	//thread.ID = id
+	return &thread, nil
+
 }
 
 func (fR *Repository) ThreadDetailsUpdateByID(threadInfo *models.Thread, id int) (*models.Thread, error) {
@@ -210,17 +335,17 @@ func (fR *Repository) ThreadDetailsUpdateBySlug(threadInfo *models.Thread, slug 
 	return &thread, nil
 }
 
-func (fR *Repository) ThreadVoteByID(vote *models.Vote, id int,userId int) (*models.Thread, error) {
+func (fR *Repository) ThreadVoteByID(vote *models.Vote, id int, userId int) (*models.Thread, error) {
 	query := insertVoteWithIdQuery
 	var thread models.Thread
 	_, err := fR.db.Query(query, vote.Voice, vote.Nickname, id)
 	if err != nil {
-		if strings.Contains(err.Error(),"duplicate") {
-			query := updateVoteWithIdQuery 
-			_, err = fR.db.Query(query,vote.Voice,id,userId)
+		if strings.Contains(err.Error(), "duplicate") {
+			query := updateVoteWithIdQuery
+			_, err = fR.db.Query(query, vote.Voice, id, userId)
 			if err != nil {
-				fmt.Println(err)
-				return nil,err
+
+				return nil, err
 			}
 		}
 	}
@@ -234,12 +359,12 @@ func (fR *Repository) ThreadVoteByID(vote *models.Vote, id int,userId int) (*mod
 	return &thread, nil
 }
 
-func (fR *Repository) ThreadVoteBySlug(vote *models.Vote, slug string,userId int) (*models.Thread, error) {
+func (fR *Repository) ThreadVoteBySlug(vote *models.Vote, slug string, userId int) (*models.Thread, error) {
 	query := insertVoteWithSlugQuery
 	var thread models.Thread
 	_, err := fR.db.Query(query, vote.Voice, vote.Nickname, slug)
 	if err != nil {
-		fmt.Println(err)
+
 		return nil, err
 	}
 	query = findThreadWithSlugQuery
@@ -252,11 +377,15 @@ func (fR *Repository) ThreadVoteBySlug(vote *models.Vote, slug string,userId int
 	return &thread, nil
 }
 
-func (fR *Repository) ThreadGetPosts(id int, limit, since, sort, desc string) ([]models.Post,error) {
+func (fR *Repository) ThreadGetPosts(id int, limit, since, sort, desc string) ([]models.Post, error) {
 	if sort == "" || sort == "flat" {
-		return fR.threadGetPostsFlat(id, limit, since,sort, desc)
+		return fR.threadGetPostsFlat(id, limit, since, sort, desc)
+	} else if sort == "tree" {
+		return fR.threadGetPostsTree(id, limit, since, desc)
+	} else if sort == "parent_tree" {
+		return fR.threadGetPostsParentTree(id, limit, since, desc)
 	}
-	return nil,errors.New("недописал")
+	return nil, errors.New("недописал")
 }
 
 func (fR *Repository) threadGetPostsFlat(id int, limit, since, sort, desc string) ([]models.Post, error) {
@@ -266,18 +395,18 @@ func (fR *Repository) threadGetPostsFlat(id int, limit, since, sort, desc string
 	if desc == "true" {
 		if since != "" {
 			query = getPostsByThreadFlatDescSince
-			rows, err = fR.db.Queryx(query,id,since,limit)
+			rows, err = fR.db.Queryx(query, id, since, limit)
 		} else {
 			query = getPostsByThreadFlatDesc
-			rows, err = fR.db.Queryx(query,id,limit)
+			rows, err = fR.db.Queryx(query, id, limit)
 		}
 	} else {
 		if since != "" {
 			query = getPostsByThreadFlatAscSince
-			rows, err = fR.db.Queryx(query,id,since,limit)
+			rows, err = fR.db.Queryx(query, id, since, limit)
 		} else {
 			query = getPostsByThreadFlatAsc
-			rows, err = fR.db.Queryx(query,id,limit)
+			rows, err = fR.db.Queryx(query, id, limit)
 		}
 	}
 	if err != nil {
@@ -287,7 +416,88 @@ func (fR *Repository) threadGetPostsFlat(id int, limit, since, sort, desc string
 	var posts []models.Post
 	for rows.Next() {
 		post := models.Post{}
-		rows.Scan(&post.ID,&post.Parent,&post.Author,&post.Message,&post.Edited,&post.Forum,&post.Thread,&post.Created)
+		rows.Scan(&post.ID, &post.Parent, &post.Author, &post.Message, &post.Edited, &post.Forum, &post.Thread, &post.Created)
+		posts = append(posts, post)
+	}
+	if err != nil {
+
+		return nil, err
+	}
+	return posts, nil
+}
+
+func (tR *Repository) threadGetPostsTree(id int, limit string, since string, desc string) ([]models.Post, error) {
+	var err error
+	var rows *sql.Rows
+	if desc == "true" {
+		if since != "" {
+			query := getPostsByThreadTreeDescSince
+			rows, err = tR.db.Queryx(query, id, since, limit)
+		} else {
+			query := getPostsByThreadTreeDesc
+			rows, err = tR.db.Queryx(query, id, limit)
+		}
+	} else {
+		if since != "" {
+			query := getPostsByThreadTreeAscSince
+			rows, err = tR.db.Queryx(query, id, since, limit)
+		} else {
+			query := getPostsByThreadTreeAsc
+			rows, err = tR.db.Queryx(query, id, limit)
+		}
+	}
+
+	if err != nil {
+
+		return nil, err
+	}
+	defer rows.Close()
+	var posts []models.Post
+	for rows.Next() {
+		post := models.Post{}
+		rows.Scan(&post.ID, &post.Parent, &post.Author, &post.Message, &post.Edited, &post.Forum, &post.Thread, &post.Created)
+		posts = append(posts, post)
+	}
+	if err != nil {
+
+		return nil, err
+	}
+	return posts, nil
+}
+
+func (tR *Repository) threadGetPostsParentTree(id int, limit string, since string, desc string) ([]models.Post, error) {
+
+	var rows *sql.Rows
+	var err error
+
+	if desc == "true" {
+		if since != "" {
+			query := getPostsByThreadParentTreeDescSince
+			rows, err = tR.db.Queryx(query, id, since, limit)
+		} else {
+			query := getPostsByThreadParentTreeDesc
+			rows, err = tR.db.Queryx(query, id, limit)
+		}
+	} else {
+		if since != "" {
+			query := getPostsByThreadParentTreeAscSince
+			rows, err = tR.db.Queryx(query, id, since, limit)
+		} else {
+			query := getPostsByThreadParentTreeAsc
+			rows, err = tR.db.Queryx(query, id, limit)
+		}
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	var posts []models.Post
+	for rows.Next() {
+		post := models.Post{}
+		rows.Scan(&post.ID, &post.Parent, &post.Author, &post.Message, &post.Edited, &post.Forum, &post.Thread, &post.Created)
 		posts = append(posts, post)
 	}
 	if err != nil {

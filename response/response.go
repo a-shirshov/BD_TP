@@ -66,10 +66,10 @@ type PostRelated struct {
 }
 
 type FullPostInfo struct {
-	Post PostResponse `json:"post,omitempty"`	
-	Author UserResponse `json:"author,omitempty"`
-	Thread ThreadResponse `json:"thread,omitempty"`
-	Forum ForumResponse `json:"forum,omitempty"`
+	Post *PostResponse `json:"post,omitempty"`	
+	Author *UserResponse `json:"author,omitempty"`
+	Thread *ThreadResponse `json:"thread,omitempty"`
+	Forum *ForumResponse `json:"forum,omitempty"`
 }
 
 type PostResponse struct {
@@ -81,4 +81,8 @@ type PostResponse struct {
 	Forum string `json:"forum,omitempty"`
 	Thread *int `json:"thread,omitempty"`
 	Created string `json:"created,omitempty"`
+}
+
+type PostMessage struct {
+	Message string `json:"message,omitempty"`
 }

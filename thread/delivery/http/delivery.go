@@ -5,7 +5,6 @@ import (
 	threadUsecase "bd_tp/thread/usecase"
 	"net/http"
 	"strings"
-	"fmt"
 )
 
 type ThreadDelivery struct {
@@ -30,7 +29,46 @@ func (tD *ThreadDelivery) CreatePosts (w http.ResponseWriter, r *http.Request) {
 
 	posts,code,err := tD.threadU.CreatePosts(postsRequest,slug_or_id)
 	if err != nil {
-		fmt.Println(err)
+		errorResponse := &response.Error{
+			Message: "Some troubles"+err.Error(),
+		}
+		response.SendResponse(w,code,errorResponse)
+		return
+	}
+	var postsResponse []response.PostResponse
+	for index := range posts {
+		postResponse := &response.PostResponse{
+			ID: &posts[index].ID,
+			Parent: &posts[index].Parent,
+			Author: posts[index].Author,
+			Message: posts[index].Message,
+			Edited: &posts[index].Edited,
+			Forum: posts[index].Forum,
+			Thread: &posts[index].Thread,
+			Created: posts[index].Created,
+		}
+		postsResponse = append(postsResponse, *postResponse)
+	}
+	if len(postsResponse) == 0 {
+		response.SendResponse(w, code, []response.PostResponse{})
+		return
+	}
+	response.SendResponse(w,code,postsResponse)
+}
+
+func (tD *ThreadDelivery) CreatePostsNew (w http.ResponseWriter, r *http.Request) {
+	postsRequest, err := response.GetPostsFromRequest(r.Body)
+	if err != nil {
+		return
+	}
+
+	path := r.URL.Path
+	split := strings.Split(path,"/")
+	slug_or_id := split[len(split)-2]
+
+	posts,code,err := tD.threadU.CreatePostsNew(postsRequest,slug_or_id)
+	if err != nil {
+		
 		errorResponse := &response.Error{
 			Message: "Some troubles",
 		}

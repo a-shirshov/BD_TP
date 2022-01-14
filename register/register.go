@@ -6,6 +6,7 @@ import (
 	forumD "bd_tp/forum/delivery/http"
 	threadD "bd_tp/thread/delivery/http"
 	postD "bd_tp/post/delivery/http"
+	serviceD "bd_tp/service/delivery/http"
 )
 
 func UserEndpoints(r *mux.Router, userD *userD.UserDelivery) {
@@ -19,6 +20,7 @@ func ForumEndpoints(r *mux.Router, forumD *forumD.ForumDelivery) {
 	r.HandleFunc("/{slug}/details",forumD.ForumDetails).Methods("GET")
 	r.HandleFunc("/{slug}/create", forumD.ForumSlugCreate).Methods("POST")
 	r.HandleFunc("/{slug}/threads", forumD.GetThreadsByForum).Methods("GET")
+	r.HandleFunc("/{slug}/users",forumD.GetForumUsers).Methods("GET")
 }
 
 func ThreadEndpoints(r *mux.Router, threadD *threadD.ThreadDelivery) {
@@ -31,4 +33,10 @@ func ThreadEndpoints(r *mux.Router, threadD *threadD.ThreadDelivery) {
 
 func PostEndpoints(r *mux.Router, postD *postD.PostDelivery) {
 	r.HandleFunc("/{id}/details",postD.PostDetails).Methods("GET")
+	r.HandleFunc("/{id}/details",postD.UpdatePost).Methods("POST")
+}
+
+func ServiceEndpoints(r *mux.Router, serviceD *serviceD.ServiceDelivery) {
+	r.HandleFunc("/clear",serviceD.Clear).Methods("POST")
+	r.HandleFunc("/status",serviceD.GetStatus).Methods("GET")
 }
