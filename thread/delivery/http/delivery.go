@@ -1,12 +1,11 @@
 package delivery
 
 import (
-	"bd_tp/models"
 	"bd_tp/response"
 	threadUsecase "bd_tp/thread/usecase"
-	"fmt"
 	"net/http"
 	"strings"
+	"fmt"
 )
 
 type ThreadDelivery struct {
@@ -20,9 +19,7 @@ func NewThreadDelivery (tU *threadUsecase.Usecase) *ThreadDelivery {
 }
 
 func (tD *ThreadDelivery) CreatePosts (w http.ResponseWriter, r *http.Request) {
-	fmt.Println(r.Body)
 	postsRequest, err := response.GetPostsFromRequest(r.Body)
-	fmt.Println(postsRequest)
 	if err != nil {
 		return
 	}
@@ -32,15 +29,32 @@ func (tD *ThreadDelivery) CreatePosts (w http.ResponseWriter, r *http.Request) {
 	slug_or_id := split[len(split)-2]
 
 	posts,code,err := tD.threadU.CreatePosts(postsRequest,slug_or_id)
-	fmt.Println(posts)
 	if err != nil {
+		fmt.Println(err)
 		errorResponse := &response.Error{
 			Message: "Some troubles",
 		}
 		response.SendResponse(w,code,errorResponse)
+		return
 	}
-	var postsResponse models.Posts
-	postsResponse.Posts = posts
+	var postsResponse []response.PostResponse
+	for index := range posts {
+		postResponse := &response.PostResponse{
+			ID: &posts[index].ID,
+			Parent: &posts[index].Parent,
+			Author: posts[index].Author,
+			Message: posts[index].Message,
+			Edited: &posts[index].Edited,
+			Forum: posts[index].Forum,
+			Thread: &posts[index].Thread,
+			Created: posts[index].Created,
+		}
+		postsResponse = append(postsResponse, *postResponse)
+	}
+	if len(postsResponse) == 0 {
+		response.SendResponse(w, code, []response.PostResponse{})
+		return
+	}
 	response.SendResponse(w,code,postsResponse)
 }
 
@@ -131,4 +145,58 @@ func (tD *ThreadDelivery) ThreadVote (w http.ResponseWriter, r *http.Request) {
 		Created: thread.Created,
 	}
 	response.SendResponse(w,200,threadResponse)
+}
+
+func (tD *ThreadDelivery) ThreadGetPosts (w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Path
+	split := strings.Split(path,"/")
+	slug_or_id := split[len(split)-2]
+
+	q := r.URL.Query()
+	var limit string
+	var since string
+	var sort string
+	var desc string
+	if len(q["limit"]) > 0 {
+		limit = q["limit"][0]
+	}
+	if len(q["since"]) > 0 {
+		since = q["since"][0]
+	}
+	if len(q["sort"]) > 0 {
+		sort = q["sort"][0]
+	}
+	if len(q["desc"]) > 0 {
+		desc = q["desc"][0]
+	}
+
+	posts, err := tD.threadU.ThreadGetPosts(slug_or_id, limit,since,sort,desc)
+	if err != nil {
+		errorResponse := &response.Error{
+			Message: "Problems",
+		}
+		response.SendResponse(w,404,errorResponse)
+		return
+	}
+
+	var postsResponse []response.PostResponse
+	for index := range posts {
+		postResponse := &response.PostResponse{
+			ID: &posts[index].ID,
+			Parent: &posts[index].Parent,
+			Author: posts[index].Author,
+			Message: posts[index].Message,
+			Edited: &posts[index].Edited,
+			Forum: posts[index].Forum,
+			Thread: &posts[index].Thread,
+			Created: posts[index].Created,
+		}
+		postsResponse = append(postsResponse, *postResponse)
+	}
+	if len(postsResponse) == 0 {
+		response.SendResponse(w, 200, []response.ThreadResponse{})
+		return
+	}
+	response.SendResponse(w,200,postsResponse)
+
 }

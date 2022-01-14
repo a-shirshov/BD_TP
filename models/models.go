@@ -18,14 +18,14 @@ type Forum struct {
 }
 
 type Thread struct {
-	ID int `db:"id" json:"id,omitempty"`
-	Title string `db:"title" json:"title,omitempty"`
-	Author string `db:"author" json:"author,omitempty"`
-	Forum string `db:"forum" json:"forum,omitempty"`
-	Message string `db:"message" json:"message,omitempty"`
-	Votes int `db:"votes" json:"votes,omitempty"`
-	Slug string `db:"slug" json:"slug,omitempty"`
-	Created string `db:"created" json:"created,omitempty"`
+	ID int `db:"id"` 
+	Title string `db:"title"` 
+	Author string `db:"author"` 
+	Forum string `db:"forum"`
+	Message string `db:"message"`
+	Votes int `db:"votes"`
+	Slug string `db:"slug"`
+	Created string `db:"created"`
 }
 
 type ForumThreadsRequest struct {
@@ -69,3 +69,4 @@ type FullPostInfo struct {
 	Thread Thread
 	Forum Forum
 }
+

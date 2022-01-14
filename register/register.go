@@ -26,6 +26,7 @@ func ThreadEndpoints(r *mux.Router, threadD *threadD.ThreadDelivery) {
 	r.HandleFunc("/{slug_or_id}/details",threadD.ThreadDetails).Methods("GET")
 	r.HandleFunc("/{slug_or_id}/details",threadD.ThreadDetailsUpdate).Methods("POST")
 	r.HandleFunc("/{slug_or_id}/vote",threadD.ThreadVote).Methods("POST")
+	r.HandleFunc("/{slug_or_id}/posts",threadD.ThreadGetPosts).Methods("GET")
 }
 
 func PostEndpoints(r *mux.Router, postD *postD.PostDelivery) {

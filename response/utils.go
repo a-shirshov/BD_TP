@@ -3,7 +3,6 @@ package response
 import (
 	models "bd_tp/models"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 )
@@ -51,6 +50,7 @@ func GetThreadFromRequest(r io.Reader) (*models.Thread, error) {
 		Author: threadInput.Author,
 		Message: threadInput.Message,
 		Created: threadInput.Created,
+		Slug: threadInput.Slug,
 	}
 	return result, nil
 }
@@ -71,16 +71,14 @@ func GetThreadsQueryInfo(r io.Reader) (*models.ForumThreadsRequest, error) {
 }
 
 func GetPostsFromRequest(r io.Reader) ([]models.Post, error) {
-	var postsInput PostsRequest
+	var postsInput []PostRequest
 	err := json.NewDecoder(r).Decode(&postsInput)
 	if err != nil {
-		fmt.Println(err)
+		
 		return nil, err
 	}
 	var posts []models.Post
-	fmt.Println(posts)
-	fmt.Println("I am posts:",postsInput)
-	for _,post := range postsInput.Posts {
+	for _,post := range postsInput {
 		posts = append(posts, models.Post{
 			Parent: post.Parent,
 			Author: post.Author,
@@ -94,7 +92,7 @@ func GetThreadUpdateFromRequest(r io.Reader) (*models.Thread,error) {
 	var thread ThreadResponse
 	err := json.NewDecoder(r).Decode(&thread) 
 	if err != nil {
-		fmt.Println(err)
+		
 		return nil, err
 	}
 	result := &models.Thread{
@@ -108,7 +106,7 @@ func GetVoteFromRequest(r io.Reader) (*models.Vote, error) {
 	var vote VoteRequest
 	err := json.NewDecoder(r).Decode(&vote) 
 	if err != nil {
-		fmt.Println(err)
+		
 		return nil, err
 	}
 	result := &models.Vote{
@@ -122,7 +120,7 @@ func GetPostRelatedFromRequest(r io.Reader) (*models.PostsRelated, error) {
 	var related PostRelated
 	err := json.NewDecoder(r).Decode(&related) 
 	if err != nil {
-		fmt.Println(err)
+		
 		return nil, err
 	}
 	result := &models.PostsRelated{

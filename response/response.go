@@ -39,11 +39,15 @@ type ForumThreadsRequest struct {
 }
 
 type ThreadsResponse struct {
-	Threads []ThreadResponse
+	Threads []ThreadResponse `json:""`
 }
 
 type PostsRequest struct {
 	Posts []PostRequest `json:"posts,omitempty"`
+}
+
+type UsersResponse struct {
+	Users [] UserResponse `json:""`
 }
 
 type PostRequest struct {

@@ -18,9 +18,9 @@ select * from "thread";
 --Передай f.slug и всё. Получишь Треды. 
 select t.id, t.title,u.nickname as author,f.slug as forum,t.message,t.votes,f.slug,t.created from "thread" as t 
 join "forum" as f on t.forum_id = f.id  
-join "user" as u on u.id = t.user_id where f.slug = 'pirate stories' 
+join "user" as u on u.id = t.user_id where f.slug = 'i-ojlRKE2u8Us' 
 ORDER BY t.title DESC
-LIMIT 2;
+LIMIT 100;
 
 --Posts by id create
 insert into "post" (parent,message,user_id,thread_id,created) 
@@ -82,4 +82,55 @@ select p.id, p.edited, f.slug as forum, p.created,t.id as thread from "post" as 
     join "forum" as f on f.id = t.forum_id
     where t.id = 1 and p.id = 1;
 
+select * from "vote"
+    join "user" as u on "vote".user_id = u.id
+    join "thread" as t on t.id = "vote".thread_id
+    where u.nickname = 'silentio.j0vCx4kA1trxpD' and t.id = 75;
 
+update "vote"
+    set voice = -1 
+    from (select u.nickname,t.id from "vote" as table_vote
+        join "user" as u on u.id = table_vote.user_id
+        join "thread" as t on t.id = table_vote.thread_id
+    ) as subquery
+    where subquery.nickname = 'silentio.j0vCx4kA1trxpD';
+
+select u.nickname,t.id from "vote" as table_vote
+        join "user" as u on u.id = table_vote.user_id
+        join "thread" as t on t.id = table_vote.thread_id
+        where u.nickname = 'silentio.j0vCx4kA1trxpD'
+
+update "vote" 
+        join "user" as u on u.id = "vote" .user_id
+        join "thread" as t on t.id = "vote" .thread_id
+    set voice = 1
+    where u.nickname = 'silentio.j0vCx4kA1trxpD'
+
+update "vote"
+    set voice = 1 
+    where vote.t_id = ;
+
+
+select p.id,p.parent,u.nickname as author,p.message,p.edited,f.slug as forum,t.id as thread,p.created
+	from "post" as p
+	join "thread" as t on p.thread_id = t.id
+	join "forum" as f on f.id = t.forum_id
+	join "user" as u on u.id = p.user_id
+	where p.thread_id = $1 and p.id = $2
+	order by p.id desc limit $3;
+
+
+insert into "post" (parent,message,user_id,forum,thread_id,created) 
+    select 0,'qwe',u.id,'O-z-M0A2-98y82',t.id,'2021-01-21T12:22:38.680+03:00' from "user" as u
+    join "thread" as t on t.user_id = u.id
+    join "forum" as f on f.slug = t.forum
+    where u.nickname = 'bonam.NHQ6kGl1h87sJU' AND t.id = 68  returning id;
+
+
+select u.id,'O-z-M0A2-98y82',t.id from "user" as u, "thread" as t 
+    where u.nickname = 'bonam.NHQ6kGl1h87sJU' AND t.id = 68 and t.forum = 'O-z-M0A2-98y82';
+
+select * from "forum" as f  
+join "thread" as t on f.id = t.forum_id
+join "user" as u on t.user_id = u.id
+where f.slug ='O-z-M0A2-98y82' and t.id = 68 and u.nickname = 'bonam.NHQ6kGl1h87sJU'

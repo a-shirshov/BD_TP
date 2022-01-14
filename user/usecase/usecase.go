@@ -1,9 +1,8 @@
 package usecase
 
 import (
-	userRepo "bd_tp/user/repository"
 	"bd_tp/models"
-	"fmt"
+	userRepo "bd_tp/user/repository"
 )
 
 type Usecase struct {
@@ -16,13 +15,13 @@ func NewUserUsecase (uR *userRepo.Repository) *Usecase {
 	}
 }
 
-func (uR *Usecase) CreateUser (u *models.User) (*models.User, bool, error) {
-	resultUser,isNew,err := uR.userRepo.CreateUser(u)
+func (uR *Usecase) CreateUser (u *models.User) ([]models.User, bool, error) {
+	users,isNew,err := uR.userRepo.CreateUser(u)
 	if err != nil {
-		fmt.Println(err)
+		
 		return nil,isNew, err
 	}
-	return resultUser, isNew, nil
+	return users, isNew, nil
 }
 
 func (uR *Usecase) ProfileInfo (nickname string) (*models.User,error) {
@@ -34,6 +33,19 @@ func (uR *Usecase) ProfileInfo (nickname string) (*models.User,error) {
 }
 
 func (uR *Usecase) UpdateProfile (u *models.User) (*models.User, bool, error) {
+	oldProfile,err := uR.userRepo.ProfileInfo(u.Nickname) 
+	if err != nil {
+		return nil,false,err
+	}
+	if u.Fullname == "" {
+		u.Fullname = oldProfile.Fullname
+	}
+	if u.Email == "" {
+		u.Email = oldProfile.Email
+	}
+	if u.About == "" {
+		u.About = oldProfile.About
+	}
 	resultUser, isFound, err := uR.userRepo.UpdateProfile(u)
 	if err != nil {
 		return nil, isFound, err

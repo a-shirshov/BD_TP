@@ -3,7 +3,6 @@ package delivery
 import (
 	postUsecase "bd_tp/post/usecase"
 	"bd_tp/response"
-	"fmt"
 	"net/http"
 	"strings"
 )
@@ -20,7 +19,6 @@ func NewPostDelivery(pU *postUsecase.Usecase) *PostDelivery {
 
 func (pD *PostDelivery) PostDetails (w http.ResponseWriter, r* http.Request) {
 	postsRequest, err := response.GetPostRelatedFromRequest(r.Body)
-	fmt.Println(postsRequest.Related)
 	if err != nil {
 		return
 	}
@@ -29,8 +27,6 @@ func (pD *PostDelivery) PostDetails (w http.ResponseWriter, r* http.Request) {
 	id := split[len(split)-2]
 
 	requestString := strings.Join(postsRequest.Related," ")
-	fmt.Println(requestString)
-
 	wannaUser := strings.Contains(requestString,"user")
 	wannaForum := strings.Contains(requestString,"forum")
 	wannaThread := strings.Contains(requestString,"thread")

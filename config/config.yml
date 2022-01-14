@@ -1,7 +1,7 @@
 postgres_db:
-    user: "a_shirshov"
+    user: "postgres"
     password: "password"
     host: "127.0.0.1"
-    port: "5432"
-    dbname: "bd_tp"
+    port: "5436"
+    dbname: "postgres"
     sslmode: "disable"

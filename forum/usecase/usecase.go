@@ -2,78 +2,107 @@ package usecase
 
 import (
 	forumRepo "bd_tp/forum/repository"
-	userRepo "bd_tp/user/repository"
 	"bd_tp/models"
-	"fmt"
-	uuid "github.com/satori/go.uuid"
+	threadRepo "bd_tp/thread/repository"
+	userRepo "bd_tp/user/repository"
 )
 
 type Usecase struct {
 	forumRepo *forumRepo.Repository
-	userRepo *userRepo.Repository
+	userRepo  *userRepo.Repository
+	threadRepo *threadRepo.Repository
 }
 
-func NewForumUsecase (fR *forumRepo.Repository, uR *userRepo.Repository) *Usecase {
+func NewForumUsecase(fR *forumRepo.Repository, uR *userRepo.Repository, tR *threadRepo.Repository) *Usecase {
 	return &Usecase{
 		forumRepo: fR,
-		userRepo: uR,
+		userRepo:  uR,
+		threadRepo: tR,
 	}
 }
 
 func (fU *Usecase) CreateForum(f *models.Forum) (*models.Forum, int, error) {
-	userId, err := fU.userRepo.GetIdByNickname(f.User)
+	user, err := fU.userRepo.ProfileInfo(f.User)
 	if err != nil {
-		return nil,404,err
+		return nil, 404, err
 	}
-	forum, code, err := fU.forumRepo.CreateForum(f,userId)
+	if f.Slug != "" {
+		oldForum, err := fU.forumRepo.ForumDetails(f.Slug)
+		if err == nil {
+			return oldForum, 409, nil
+		}
+	}
+	forum, code, err := fU.forumRepo.CreateForum(f, user.ID)
+	forum.User = user.Nickname
 	if err != nil {
 		return nil, code, err
 	}
-	return forum,code,err
+	return forum, code, err
 }
 
-func (fU *Usecase) ForumDetails(slug string) (*models.Forum,error) {
-	forum,err := fU.forumRepo.ForumDetails(slug)
+func (fU *Usecase) ForumDetails(slug string) (*models.Forum, error) {
+	forum, err := fU.forumRepo.ForumDetails(slug)
 	if err != nil {
 		return nil, err
 	}
 	return forum, nil
 }
 
-func (fU *Usecase) ForumSlugCreate (th *models.Thread) (*models.Thread,int,error) {
+func (fU *Usecase) ForumSlugCreate(th *models.Thread, slug string) (*models.Thread, int, error) {
 	userId, err := fU.userRepo.GetIdByNickname(th.Author)
 	if err != nil {
-		fmt.Println(err)
-		return nil,404,err
+
+		return nil, 404, err
 	}
-	forumInfo, err := fU.forumRepo.GetIdAndTitleBySlug(th.Slug)
-	if err !=nil {
-		fmt.Println(err)
-		return nil,404,err
-	}
-	slug := forumInfo.Title+"/thread" + uuid.NewV4().String()
-	th.Slug = slug
-	thread, code, err := fU.forumRepo.ForumSlugCreate(th,forumInfo,userId)
+
+	forum, err := fU.forumRepo.ForumDetails(slug)
 	if err != nil {
-		fmt.Println(err)
+
+		return nil, 404, err
+	}
+
+	if th.Slug != "" {
+		oldThread, err := fU.threadRepo.ThreadDetailsBySlug(th.Slug)
+		if err != nil {
+		} else {
+			return oldThread,409,nil
+		}
+	}
+
+	if th.Created == "" {
+		thread, code, err := fU.forumRepo.ForumSlugCreateWithoutTimeStamp(th, forum, userId)
+		if err != nil {
+
+			return nil, code, err
+		}
+		thread.Forum = forum.Slug
+		return thread, code, err
+	}
+
+	thread, code, err := fU.forumRepo.ForumSlugCreate(th, forum, userId)
+	if err != nil {
+
 		return nil, code, err
 	}
-	thread.Forum = forumInfo.Title
-	return thread,code,err
+	thread.Forum = forum.Slug
+	return thread, code, err
 }
 
-func (fU *Usecase) GetThreadsByForum (info *models.ForumThreadsRequest) ([]models.Thread, error) {
+func (fU *Usecase) GetThreadsByForum(slug, limit, since, desc string) ([]models.Thread, error) {
 	//Прверка на наличие форума
-	_, err := fU.forumRepo.GetIdAndTitleBySlug(info.Slug)
-	if err !=nil {
-		fmt.Println(err)
-		return nil,err
+	_, err := fU.forumRepo.GetIdAndTitleBySlug(slug)
+	if err != nil {
+
+		return nil, err
+	}
+	if limit == "" {
+		limit = "100"
 	}
 	//Здесь форум есть, но мб нет постов - не ошибка
-	threads, err := fU.forumRepo.GetThreadsByForum(info)
+	threads, err := fU.forumRepo.GetThreadsByForum(slug, limit, since, desc)
 	if err != nil {
-		fmt.Println(err)
-		return nil,err
+
+		return nil, err
 	}
-	return threads,nil
-}	
+	return threads, nil
+}

@@ -3,7 +3,6 @@ package delivery
 import (
 	forumUsecase "bd_tp/forum/usecase"
 	"bd_tp/response"
-	"fmt"
 	"net/http"
 	"strings"
 )
@@ -72,18 +71,15 @@ func (fD *ForumDelivery) ForumDetails (w http.ResponseWriter, r *http.Request) {
 func (fD *ForumDelivery) ForumSlugCreate (w http.ResponseWriter, r *http.Request) {
 	th, err := response.GetThreadFromRequest(r.Body)
 	if err != nil {
-		fmt.Println(err)
+		
 		return 
 	}
 	path := r.URL.Path
 	split := strings.Split(path,"/")
 	slug := split[len(split)-2]
-	th.Slug = slug
-
-	thread,code, err := fD.ForumUsecase.ForumSlugCreate(th)
-	fmt.Println(thread)
+	thread,code, err := fD.ForumUsecase.ForumSlugCreate(th,slug)
 	if err != nil {
-		fmt.Println(err)
+		
 		errorResponse := &response.Error{
 			Message: "Mistake with author or slug",
 		}
@@ -104,39 +100,51 @@ func (fD *ForumDelivery) ForumSlugCreate (w http.ResponseWriter, r *http.Request
 }
 
 func (fD *ForumDelivery) GetThreadsByForum (w http.ResponseWriter, r *http.Request) {
-	Info,err := response.GetThreadsQueryInfo(r.Body)
-	if err != nil {
-		return
-	}
 
 	path := r.URL.Path
 	split := strings.Split(path,"/")
 	slug := split[len(split)-2]
-	Info.Slug = slug
 
-	threads,err := fD.ForumUsecase.GetThreadsByForum(Info)
+	q := r.URL.Query()
+	var limit string
+	var since string
+	var desc string
+	if len(q["limit"]) > 0 {
+		limit = q["limit"][0]
+	}
+	if len(q["since"]) > 0 {
+		since = q["since"][0]
+	}
+	if len(q["desc"]) > 0 {
+		desc = q["desc"][0]
+	}
+
+	threads,err := fD.ForumUsecase.GetThreadsByForum(slug,limit,since,desc)
 	if err != nil {
-		fmt.Println(err)
+		
 		errorResponse := &response.Error{
-			Message: "No forum with with slug:"+Info.Slug,
+			Message: "No forum with with slug:"+slug,
 		}
 		response.SendResponse(w,404,errorResponse)
 		return
 	}
-	fmt.Println(threads)
-	var threadsResponse response.ThreadsResponse
-	for _,thread := range threads {
+	var threadsResponse []response.ThreadResponse
+	for index := range threads {
 		threadResponse := &response.ThreadResponse{
-			ID: &thread.ID,
-			Title: thread.Title,
-			Author: thread.Author,
-			Forum: thread.Forum,
-			Message: thread.Message,
-			Votes: &thread.Votes,
-			Slug: thread.Slug,
-			Created: thread.Created,
+			ID: &threads[index].ID,
+			Title: threads[index].Title,
+			Author: threads[index].Author,
+			Forum: threads[index].Forum,
+			Message: threads[index].Message,
+			Votes: &threads[index].Votes,
+			Slug: threads[index].Slug,
+			Created: threads[index].Created,
 		}
-		threadsResponse.Threads = append(threadsResponse.Threads, *threadResponse)
+		threadsResponse = append(threadsResponse, *threadResponse)
+	}
+	if len(threadsResponse) == 0 {
+		response.SendResponse(w, 200, []response.ThreadResponse{})
+		return
 	}
 	response.SendResponse(w,200,threadsResponse)
 }

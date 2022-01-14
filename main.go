@@ -49,8 +49,8 @@ func main() {
 	postR := postRepo.NewPostRepository(db)
 
 	userU := userUsecase.NewUserUsecase(userR)
-	forumU := forumUsecase.NewForumUsecase(forumR,userR)
-	threadU := threadUsecase.NewThreadUsecase(threadR)
+	forumU := forumUsecase.NewForumUsecase(forumR,userR,threadR)
+	threadU := threadUsecase.NewThreadUsecase(threadR,postR,userR)
 	postU := postUsecase.NewPostUsecase(postR,userR,forumR,threadR)
 
 	userD := userDelivery.NewUserDelivery(userU)
