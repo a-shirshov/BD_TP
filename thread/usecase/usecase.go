@@ -182,25 +182,15 @@ func (tU *Usecase) ThreadDetailsUpdate(threadInfo *models.Thread, slug_or_id str
 func (tU *Usecase) ThreadVote(vote *models.Vote, slug_or_id string) (*models.Thread, error) {
 	userId,err := tU.userRepo.GetIdByNickname(vote.Nickname)
 	if err != nil {
-		
 		return nil,err
 	}
-	id, err := strconv.Atoi(slug_or_id) 
+
+	threadInfo, err := tU.threadRepo.ThreadDetails(slug_or_id)
 	if err != nil {
-		/*
-		thread, err := tU.threadRepo.ThreadVoteBySlug(vote,slug_or_id,userId)
-		if err != nil {
-			("err",err)
-			return nil, err
-		}
-		return thread,nil
-		*/
-		threadInfo, err := tU.threadRepo.ThreadDetailsBySlug(slug_or_id)
-		if err != nil {
-			return nil,err
-		}
-		id = threadInfo.ID
+		return nil,err
 	}
+	id := threadInfo.ID
+
 	thread, err := tU.threadRepo.ThreadVoteByID(vote,id,userId)
 	if err != nil {
 		return nil, err

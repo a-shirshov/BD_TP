@@ -338,11 +338,11 @@ func (fR *Repository) ThreadDetailsUpdateBySlug(threadInfo *models.Thread, slug 
 func (fR *Repository) ThreadVoteByID(vote *models.Vote, id int, userId int) (*models.Thread, error) {
 	query := insertVoteWithIdQuery
 	var thread models.Thread
-	_, err := fR.db.Query(query, vote.Voice, vote.Nickname, id)
+	_, err := fR.db.Exec(query, vote.Voice, vote.Nickname, id)
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate") {
 			query := updateVoteWithIdQuery
-			_, err = fR.db.Query(query, vote.Voice, id, userId)
+			_, err = fR.db.Exec(query, vote.Voice, id, userId)
 			if err != nil {
 
 				return nil, err
@@ -362,7 +362,7 @@ func (fR *Repository) ThreadVoteByID(vote *models.Vote, id int, userId int) (*mo
 func (fR *Repository) ThreadVoteBySlug(vote *models.Vote, slug string, userId int) (*models.Thread, error) {
 	query := insertVoteWithSlugQuery
 	var thread models.Thread
-	_, err := fR.db.Query(query, vote.Voice, vote.Nickname, slug)
+	_, err := fR.db.Exec(query, vote.Voice, vote.Nickname, slug)
 	if err != nil {
 
 		return nil, err
